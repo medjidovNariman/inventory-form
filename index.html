@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.json">
 <title>Инвентаризация</title>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#F5F4F0;--card:#fff;--accent:#1A1A2E;--accent2:#4F6BED;--text:#1A1A2E;--muted:#8A8A9A;--border:#E8E7E3;--success:#2ECC8F;--radius:20px;--shadow:0 4px 24px rgba(26,26,46,.08)}
@@ -300,37 +300,43 @@ document.getElementById('serialInput').addEventListener('input', updateProgress)
 document.getElementById('modelInput').addEventListener('input', updateProgress);
 document.getElementById('locationInput').addEventListener('input', updateProgress);
 
-// SCANNER - ZXing
-let codeReader = null;
+// SCANNER - html5-qrcode
+let html5Scanner = null;
 
 function openScanner(type) {
   document.getElementById("scannerModal").classList.add("show");
   document.getElementById("scannerResult").style.display = "none";
   const container = document.getElementById("scannerContainer");
-  container.innerHTML = '<video id="scannerVideo" style="width:100%;height:100%;object-fit:cover" playsinline autoplay muted></video>';
+  container.innerHTML = '<div id="qrReader" style="width:100%;height:100%"></div>';
 
-  const hints = new Map();
   const formats = type === "qr"
-    ? [ZXing.BarcodeFormat.QR_CODE]
-    : [ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8,
-       ZXing.BarcodeFormat.CODE_39, ZXing.BarcodeFormat.CODE_93, ZXing.BarcodeFormat.UPC_A];
-  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
-  hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+    ? [Html5QrcodeSupportedFormats.QR_CODE]
+    : [
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.QR_CODE
+      ];
 
-  codeReader = new ZXing.BrowserMultiFormatReader(hints);
+  html5Scanner = new Html5Qrcode("qrReader", { formatsToSupport: formats });
 
-  navigator.mediaDevices.getUserMedia({
-    video: {
-      facingMode: { exact: "environment" },
-      width: { ideal: 1920 },
-      height: { ideal: 1080 }
-    }
-  }).then(stream => {
-    const video = document.getElementById("scannerVideo");
-    video.srcObject = stream;
-    video.play();
-    codeReader.decodeFromVideoElement(video).then(result => {
-      const code = result.getText();
+  html5Scanner.start(
+    { facingMode: "environment" },
+    {
+      fps: 15,
+      qrbox: { width: 280, height: 140 },
+      aspectRatio: 1.7,
+      disableFlip: false,
+      videoConstraints: {
+        facingMode: { exact: "environment" },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        focusMode: "continuous"
+      }
+    },
+    (code) => {
       document.getElementById("scannerResultText").innerText = code;
       document.getElementById("scannerResult").style.display = "block";
       if (navigator.vibrate) navigator.vibrate(100);
@@ -339,17 +345,21 @@ function openScanner(type) {
         updateProgress();
         closeScanner();
       }, 1000);
-    }).catch(() => {});
-  }).catch(err => {
-    alert("Нет доступа к камере: " + err);
+    },
+    () => {}
+  ).catch(err => {
+    alert("Ошибка камеры: " + err);
     closeScanner();
   });
 }
 
 function closeScanner() {
-  if (codeReader) { try { codeReader.reset(); } catch(e) {} codeReader = null; }
-  const v = document.getElementById("scannerVideo");
-  if (v && v.srcObject) v.srcObject.getTracks().forEach(t => t.stop());
+  if (html5Scanner) {
+    html5Scanner.stop().then(() => {
+      html5Scanner.clear();
+      html5Scanner = null;
+    }).catch(() => { html5Scanner = null; });
+  }
   document.getElementById("scannerModal").classList.remove("show");
   document.getElementById("scannerContainer").innerHTML = "";
 }
