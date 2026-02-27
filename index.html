@@ -333,44 +333,32 @@
 
     Quagga.init({
       inputStream: {
-        name: 'Live',
-        type: 'LiveStream',
-        target: document.getElementById('scannerContainer'),
-        constraints: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 }, focusMode: { ideal: 'continuous' }, advanced: [{ focusMode: 'continuous' }] }
+        name: "Live",
+        type: "LiveStream",
+        target: document.getElementById("scannerContainer"),
+        constraints: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
       },
-      decoder: { readers: readers.length ? readers : ['code_128_reader','qr_code'] },
+      decoder: { readers: readers.length ? readers : ["code_128_reader"] },
       locate: true
     }, err => {
       if (err) { alert("Нет доступа к камере: " + err); closeScanner(); return; }
       Quagga.start();
       scannerRunning = true;
-      setTimeout(() => {
-        const video = document.querySelector("#scannerContainer video");
-        if (video && video.srcObject) {
-          const track = video.srcObject.getVideoTracks()[0];
-          if (track) track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
-        }
-      }, 800);
+    });
 
     Quagga.onDetected(result => {
       if (!result || !result.codeResult) return;
       const code = result.codeResult.code;
       if (!code) return;
-
-      // Show result
-      document.getElementById('scannerResultText').innerText = code;
-      document.getElementById('scannerResult').style.display = 'block';
-
-      // Vibrate
+      document.getElementById("scannerResultText").innerText = code;
+      document.getElementById("scannerResult").style.display = "block";
       if (navigator.vibrate) navigator.vibrate(100);
-
       setTimeout(() => {
-        document.getElementById('serialInput').value = code;
+        document.getElementById("serialInput").value = code;
         updateProgress();
         closeScanner();
       }, 1000);
     });
-  }
 
   function closeScanner() {
     if (scannerRunning) {
