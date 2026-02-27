@@ -136,7 +136,7 @@
   <div class="card">
     <div class="field-label"><div class="icon">🖥</div> Тип устройства <span class="required">*</span></div>
     <div class="chips" id="typeChips">
-      <div class="chip" data-value="Моноблок">Моноблок111</div>
+      <div class="chip" data-value="Моноблок">Моноблок</div>
       <div class="chip" data-value="Принтер">Принтер</div>
       <div class="chip" data-value="Ноутбук">Ноутбук</div>
       <div class="chip" data-value="Сканер">Сканер</div>
@@ -277,10 +277,13 @@
     updateProgress();
   }
 
+  let photoBase64 = '';
+
   function handlePhoto(input) {
     if (input.files && input.files[0]) {
       const reader = new FileReader();
       reader.onload = e => {
+        photoBase64 = e.target.result;
         document.getElementById('photoPreview').src = e.target.result;
         document.querySelector('.photo-zone').classList.add('has-photo');
         updateProgress();
@@ -380,6 +383,7 @@
       location: document.getElementById('locationInput').value.trim(),
       status: document.querySelector('.status-card.active')?.dataset.value || '',
       date: document.getElementById('dateInput').value,
+      photo: photoBase64
     };
 
     fetch(SCRIPT_URL, {
@@ -404,6 +408,7 @@
     document.querySelectorAll('.status-card').forEach(c => c.classList.remove('active'));
     ['modelInput','serialInput','locationInput'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('dateInput').value = today;
+    photoBase64 = '';
     document.querySelector('.photo-zone').classList.remove('has-photo');
     document.getElementById('photoPreview').src = '';
     updateProgress();
