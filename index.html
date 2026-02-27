@@ -136,7 +136,7 @@
   <div class="card">
     <div class="field-label"><div class="icon">🖥</div> Тип устройства <span class="required">*</span></div>
     <div class="chips" id="typeChips">
-      <div class="chip" data-value="Моноблок">Моноблок1</div>
+      <div class="chip" data-value="Моноблок">Моноблок</div>
       <div class="chip" data-value="Принтер">Принтер</div>
       <div class="chip" data-value="Ноутбук">Ноутбук</div>
       <div class="chip" data-value="Сканер">Сканер</div>
@@ -336,15 +336,21 @@
         name: 'Live',
         type: 'LiveStream',
         target: document.getElementById('scannerContainer'),
-        constraints: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+        constraints: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 }, focusMode: { ideal: 'continuous' }, advanced: [{ focusMode: 'continuous' }] }
       },
       decoder: { readers: readers.length ? readers : ['code_128_reader','qr_code'] },
       locate: true
     }, err => {
-      if (err) { alert('Нет доступа к камере: ' + err); closeScanner(); return; }
+      if (err) { alert("Нет доступа к камере: " + err); closeScanner(); return; }
       Quagga.start();
       scannerRunning = true;
-    });
+      setTimeout(() => {
+        const video = document.querySelector("#scannerContainer video");
+        if (video && video.srcObject) {
+          const track = video.srcObject.getVideoTracks()[0];
+          if (track) track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
+        }
+      }, 800);
 
     Quagga.onDetected(result => {
       if (!result || !result.codeResult) return;
