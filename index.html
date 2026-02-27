@@ -154,9 +154,9 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
         </div>
       </div>
       <div class="lens-hint" id="lensHint" style="display:none">
-        <p>1. Нажми кнопку ниже — откроется Объектив</p>
-        <p>2. Наведи на штрихкод или текст с серийным номером</p>
-        <p>3. Выдели и скопируй номер → вернись сюда → вставь</p>
+        <p>1. Нажми "Сканер" — откроется QR Scanner</p>
+        <p>2. Наведи на штрихкод или QR-код</p>
+        <p>3. Результат автоматически вставится в поле!</p>
         <button onclick="document.getElementById('lensHint').style.display='none';document.getElementById('serialInput').focus()" style="margin-top:10px;background:var(--accent2);color:#fff;border:none;border-radius:10px;padding:8px 16px;font-family:Manrope,sans-serif;font-size:13px;font-weight:700;cursor:pointer;width:100%">Вставить номер →</button>
       </div>
     </div>
@@ -300,29 +300,33 @@ document.getElementById('serialInput').addEventListener('input', updateProgress)
 document.getElementById('modelInput').addEventListener('input', updateProgress);
 document.getElementById('locationInput').addEventListener('input', updateProgress);
 
-// Google Lens (Объектив) & Camera
+// QR & Barcode Scanner (Gamma Play)
 function openGoogleLens() {
   document.getElementById("lensHint").style.display = "block";
   document.getElementById("lensHint").scrollIntoView({ behavior: "smooth" });
   
-  // Пробуем разные способы открыть Google Lens / Объектив
-  const intents = [
-    "intent://lens/#Intent;scheme=googleapp;package=com.google.android.googlequicksearchbox;action=com.google.android.apps.lens.LENS_ACTIVITY;end",
-    "intent:#Intent;action=com.google.android.apps.lens.LENS_ACTIVITY;package=com.google.android.googlequicksearchbox;end",
-    "intent://scan/#Intent;scheme=zxing;package=com.google.android.googlequicksearchbox;end"
-  ];
-  
-  // Открываем через intent
-  window.location.href = intents[0];
+  // Intent для QR & Barcode Scanner (Gamma Play)
+  const returnUrl = encodeURIComponent(window.location.href.split("?")[0] + "?scan={CODE}");
+  window.location.href = "intent://scan/#Intent;scheme=zxing;package=com.gamma.scan;S.browser_fallback_url=https://play.google.com/store/apps/details?id=com.gamma.scan;end";
 }
 
 function openBarcodeCamera() {
-  document.getElementById("lensHint").style.display = "block";
-  document.getElementById("lensHint").scrollIntoView({ behavior: "smooth" });
-  setTimeout(() => { document.getElementById("serialInput").focus(); }, 500);
+  openGoogleLens();
 }
 
 function closeScanner() {}
+
+// Получаем результат из URL
+function checkScanResult() {
+  const params = new URLSearchParams(window.location.search);
+  const scan = params.get("scan");
+  if (scan && scan !== "{CODE}") {
+    document.getElementById("serialInput").value = decodeURIComponent(scan);
+    updateProgress();
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+}
+window.addEventListener("load", checkScanResult);
 
 function submitForm() {
   const serial = document.getElementById('serialInput').value.trim();
