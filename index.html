@@ -295,17 +295,50 @@ document.getElementById('locationInput').addEventListener('input', updateProgres
 // SCANNER - ZXing
 let codeReader = null;
 
-function openScanner(type) {
+async function openScanner(type) {
   document.getElementById("scannerModal").classList.add("show");
   document.getElementById("scannerResult").style.display = "none";
 
-  // Add video element
   const container = document.getElementById("scannerContainer");
-  container.innerHTML = '<video id="scannerVideo" style="width:100%;height:100%;object-fit:cover" playsinline></video>';
+  container.innerHTML = '<video id="scannerVideo" style="width:100%;height:100%;object-fit:cover" playsinline autoplay muted></video>';
+
+  const video = document.getElementById("scannerVideo");
+
+  // Запрашиваем лучшую камеру с автофокусом
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { exact: "environment" },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        focusMode: "continuous",
+        advanced: [{ focusMode: "continuous" }]
+      }
+    });
+    video.srcObject = stream;
+    await video.play();
+
+    // Включаем автофокус если доступен
+    const track = stream.getVideoTracks()[0];
+    if (track.getCapabilities) {
+      const caps = track.getCapabilities();
+      if (caps.focusMode && caps.focusMode.includes("continuous")) {
+        await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] });
+      }
+    }
+  } catch(e) {
+    // Если нет задней камеры - используем любую
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    video.srcObject = stream;
+    await video.play();
+  }
 
   codeReader = new ZXing.BrowserMultiFormatReader();
+  const hints = new Map();
+  hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+  codeReader.hints = hints;
 
-  codeReader.decodeFromVideoDevice(null, "scannerVideo", function(result, err) {
+  codeReader.decodeFromVideoElement(video, function(result, err) {
     if (result) {
       const code = result.getText();
       document.getElementById("scannerResultText").innerText = code;
@@ -317,11 +350,6 @@ function openScanner(type) {
         closeScanner();
       }, 1000);
     }
-  }).catch(function(err) {
-    if (err && err.name !== "NotFoundException") {
-      alert("Ошибка камеры: " + err);
-      closeScanner();
-    }
   });
 }
 
@@ -329,6 +357,10 @@ function closeScanner() {
   if (codeReader) {
     try { codeReader.reset(); } catch(e) {}
     codeReader = null;
+  }
+  const video = document.getElementById("scannerVideo");
+  if (video && video.srcObject) {
+    video.srcObject.getTracks().forEach(t => t.stop());
   }
   document.getElementById("scannerModal").classList.remove("show");
   document.getElementById("scannerContainer").innerHTML = "";
