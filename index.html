@@ -3,20 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Инвентаризация">
-<meta name="theme-color" content="#1A1A2E">
-<link rel="manifest" href="manifest.json">
 <title>Инвентаризация</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#F5F4F0;--card:#fff;--accent:#1A1A2E;--accent2:#4F6BED;--text:#1A1A2E;--muted:#8A8A9A;--border:#E8E7E3;--success:#2ECC8F;--radius:20px;--shadow:0 4px 24px rgba(26,26,46,.08)}
 body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:40px}
-.header{background:var(--accent);padding:52px 24px 28px;position:relative;overflow:hidden}
+.header{background:var(--accent);padding:32px 24px 28px;position:relative;overflow:hidden}
 .header::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:var(--accent2);opacity:.15}
 .header-tag{display:inline-block;background:rgba(79,107,237,.2);color:#8FA3F8;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5px 12px;border-radius:100px;margin-bottom:12px}
 .header h1{color:#fff;font-size:26px;font-weight:800;line-height:1.2;position:relative;z-index:1}
@@ -35,40 +29,18 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
 .required{color:var(--accent2)}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{padding:8px 14px;border-radius:100px;border:1.5px solid var(--border);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .2s;background:transparent;white-space:nowrap}
-.chip:active{transform:scale(.95)}
 .chip.active{border-color:var(--accent2);color:var(--accent2);background:rgba(79,107,237,.08)}
 .field-input{width:100%;border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;font-family:'Manrope',sans-serif;font-size:15px;font-weight:500;color:var(--text);background:var(--bg);outline:none;transition:border-color .2s;-webkit-appearance:none}
 .field-input:focus{border-color:var(--accent2);background:#fff}
 .field-input::placeholder{color:var(--muted);font-weight:400}
 .serial-wrap{display:flex;flex-direction:column;gap:10px}
 .serial-input-row{position:relative}
-.serial-input-row .field-input{padding-right:100px}
-.scan-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--accent2);border:none;border-radius:10px;padding:9px 14px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px}
+.serial-input-row .field-input{padding-right:110px}
+.scan-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--accent2);border:none;border-radius:10px;padding:9px 14px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap}
 .scan-options{display:flex;gap:8px}
 .scan-option{flex:1;padding:10px;border:1.5px solid var(--border);border-radius:12px;background:var(--bg);font-family:'Manrope',sans-serif;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .2s}
 .scan-option:active{transform:scale(.97)}
 .scan-option .opt-icon{font-size:20px}
-.scanner-modal{display:none;position:fixed;inset:0;background:#000;z-index:200;flex-direction:column}
-.scanner-modal.show{display:flex}
-.scanner-header{padding:52px 20px 16px;display:flex;align-items:center;justify-content:space-between;position:absolute;top:0;left:0;right:0;z-index:10;background:linear-gradient(to bottom,rgba(0,0,0,.7),transparent)}
-.scanner-title{color:#fff;font-size:16px;font-weight:700}
-.scanner-close{background:rgba(255,255,255,.2);border:none;border-radius:50%;width:38px;height:38px;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-#scannerContainer{width:100%;height:100%;position:relative}
-#scannerContainer video{width:100%!important;height:100%!important;object-fit:cover}
-#scannerContainer canvas{position:absolute!important;top:0;left:0;width:100%!important;height:100%!important}
-.scanner-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
-.scanner-frame{width:280px;height:140px;border:2px solid var(--accent2);border-radius:16px;position:relative}
-.scanner-frame::before{content:'';position:absolute;left:4px;right:4px;height:2px;background:rgba(79,107,237,.8);top:0;animation:scanLine 1.8s ease-in-out infinite}
-@keyframes scanLine{0%,100%{top:4px}50%{top:calc(100% - 6px)}}
-.corner{position:absolute;width:20px;height:20px;border-color:var(--accent2);border-style:solid}
-.corner-tl{top:-2px;left:-2px;border-width:3px 0 0 3px;border-radius:4px 0 0 0}
-.corner-tr{top:-2px;right:-2px;border-width:3px 3px 0 0;border-radius:0 4px 0 0}
-.corner-bl{bottom:-2px;left:-2px;border-width:0 0 3px 3px;border-radius:0 0 0 4px}
-.corner-br{bottom:-2px;right:-2px;border-width:0 3px 3px 0;border-radius:0 0 4px 0}
-.scanner-hint{color:rgba(255,255,255,.7);font-size:13px;margin-top:20px;text-align:center;font-family:'Manrope',sans-serif}
-.scanner-result-bar{position:absolute;bottom:0;left:0;right:0;background:var(--success);padding:20px 24px 36px;color:#fff;font-family:'Manrope',sans-serif;display:none}
-.scanner-result-bar .res-label{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:.8;margin-bottom:4px}
-.scanner-result-bar .res-value{font-size:20px;font-weight:800}
 .photo-zone{border:2px dashed var(--border);border-radius:16px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s}
 .photo-zone.has-photo{border-style:solid;border-color:var(--success);padding:0}
 .photo-zone .photo-icon{width:48px;height:48px;background:var(--bg);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px}
@@ -78,12 +50,8 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
 .photo-zone.has-photo .photo-preview{display:block}
 .photo-zone.has-photo .photo-placeholder{display:none}
 #photoInput{display:none}
-.lens-hint{background:#F0F4FF;border-radius:14px;padding:14px;margin-top:10px}
-.lens-hint p{font-size:13px;color:var(--text);margin-bottom:6px;font-weight:500}
-.lens-hint p::before{content:"• ";color:var(--accent2)}
 .status-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .status-card{border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px}
-.status-card:active{transform:scale(.97)}
 .status-card .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .status-card span{font-size:13px;font-weight:600;color:var(--muted)}
 .status-card.active span{color:var(--text)}
@@ -95,7 +63,6 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
 .date-input:focus{border-color:var(--accent2)}
 .submit-wrap{padding:20px}
 .submit-btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:18px;font-family:'Manrope',sans-serif;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s;box-shadow:0 8px 24px rgba(26,26,46,.25)}
-.submit-btn:active{transform:scale(.98)}
 .submit-btn.loading{opacity:.7;pointer-events:none}
 .success-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:100;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center}
 .success-screen.show{display:flex}
@@ -123,7 +90,7 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
   <div class="card">
     <div class="field-label"><div class="icon">🖥</div> Тип устройства <span class="required">*</span></div>
     <div class="chips" id="typeChips">
-      <div class="chip" data-value="Моноблок">Моноблок2</div>
+      <div class="chip" data-value="Моноблок">Моноблок</div>
       <div class="chip" data-value="Принтер">Принтер</div>
       <div class="chip" data-value="Ноутбук">Ноутбук</div>
       <div class="chip" data-value="Сканер">Сканер</div>
@@ -144,14 +111,14 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
     <div class="serial-wrap">
       <div class="serial-input-row">
         <input class="field-input" type="text" id="serialInput" placeholder="Введите или отсканируйте" autocomplete="off">
-        <button class="scan-btn" onclick="openScanner()">📷 Скан</button>
+        <button class="scan-btn" onclick="scanBarcode()">📷 Скан</button>
       </div>
       <div class="scan-options">
-        <div class="scan-option" onclick="openScanner('barcode')">
+        <div class="scan-option" onclick="scanBarcode()">
           <div class="opt-icon">▌▌▌</div>
           <span>Штрихкод</span>
         </div>
-        <div class="scan-option" onclick="openScanner('qr')">
+        <div class="scan-option" onclick="scanQR()">
           <div class="opt-icon">⬛</div>
           <span>QR-код</span>
         </div>
@@ -162,6 +129,7 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
       </div>
     </div>
   </div>
+
   <div class="card">
     <div class="field-label"><div class="icon">🏢</div> Организация</div>
     <div class="chips" id="orgChips">
@@ -209,29 +177,6 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
   <button class="submit-btn" onclick="submitForm()"><span>✓</span> Сохранить в таблицу</button>
 </div>
 
-<!-- SCANNER -->
-<div class="scanner-modal" id="scannerModal">
-  <div class="scanner-header">
-    <span class="scanner-title">Сканирование</span>
-    <button class="scanner-close" onclick="closeScanner()">✕</button>
-  </div>
-  <div id="scannerContainer"></div>
-  <div class="scanner-overlay">
-    <div class="scanner-frame">
-      <div class="corner corner-tl"></div>
-      <div class="corner corner-tr"></div>
-      <div class="corner corner-bl"></div>
-      <div class="corner corner-br"></div>
-    </div>
-    <div class="scanner-hint">Наведите камеру на штрихкод или QR-код</div>
-  </div>
-  <div class="scanner-result-bar" id="scannerResult">
-    <div class="res-label">Распознано</div>
-    <div class="res-value" id="scannerResultText"></div>
-  </div>
-</div>
-
-<!-- SUCCESS -->
 <div class="success-screen" id="successScreen">
   <div class="success-icon">✓</div>
   <h2>Сохранено!</h2>
@@ -241,6 +186,9 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
 
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby9C1uahqrfggv-a5pL4gTVplcPGhn3Lmf5oMJuiqqXfLpljW0E3jojkI0bnXMO1ny1eA/exec';
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+
 const today = new Date().toISOString().split('T')[0];
 document.getElementById('dateInput').value = today;
 
@@ -258,6 +206,26 @@ function selectStatus(el) {
   document.querySelectorAll('.status-card').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
   updateProgress();
+}
+
+// СКАНЕР через Telegram API
+function scanBarcode() {
+  if (tg && tg.showScanQrPopup) {
+    tg.showScanQrPopup({ text: 'Наведите на штрихкод или QR-код' }, (result) => {
+      if (result) {
+        document.getElementById('serialInput').value = result;
+        updateProgress();
+        tg.closeScanQrPopup();
+        return true;
+      }
+    });
+  } else {
+    alert('Сканер доступен только в Telegram. Введите номер вручную.');
+  }
+}
+
+function scanQR() {
+  scanBarcode();
 }
 
 let photoBase64 = '';
@@ -300,78 +268,9 @@ document.getElementById('serialInput').addEventListener('input', updateProgress)
 document.getElementById('modelInput').addEventListener('input', updateProgress);
 document.getElementById('locationInput').addEventListener('input', updateProgress);
 
-// SCANNER - html5-qrcode
-let html5Scanner = null;
-
-function openScanner(type) {
-  document.getElementById("scannerModal").classList.add("show");
-  document.getElementById("scannerResult").style.display = "none";
-  const container = document.getElementById("scannerContainer");
-  container.innerHTML = '<div id="qrReader" style="width:100%;height:100%"></div>';
-
-  const formats = type === "qr"
-    ? [Html5QrcodeSupportedFormats.QR_CODE]
-    : [
-        Html5QrcodeSupportedFormats.CODE_128,
-        Html5QrcodeSupportedFormats.CODE_39,
-        Html5QrcodeSupportedFormats.EAN_13,
-        Html5QrcodeSupportedFormats.EAN_8,
-        Html5QrcodeSupportedFormats.UPC_A,
-        Html5QrcodeSupportedFormats.QR_CODE
-      ];
-
-  html5Scanner = new Html5Qrcode("qrReader", { formatsToSupport: formats });
-
-  html5Scanner.start(
-    { facingMode: "environment" },
-    {
-      fps: 15,
-      qrbox: { width: 280, height: 140 },
-      aspectRatio: 1.7,
-      disableFlip: false,
-      videoConstraints: {
-        facingMode: { exact: "environment" },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
-        focusMode: "continuous"
-      }
-    },
-    (code) => {
-      document.getElementById("scannerResultText").innerText = code;
-      document.getElementById("scannerResult").style.display = "block";
-      if (navigator.vibrate) navigator.vibrate(100);
-      setTimeout(() => {
-        document.getElementById("serialInput").value = code;
-        updateProgress();
-        closeScanner();
-      }, 1000);
-    },
-    () => {}
-  ).catch(err => {
-    alert("Ошибка камеры: " + err);
-    closeScanner();
-  });
-}
-
-function closeScanner() {
-  if (html5Scanner) {
-    html5Scanner.stop().then(() => {
-      html5Scanner.clear();
-      html5Scanner = null;
-    }).catch(() => { html5Scanner = null; });
-  }
-  document.getElementById("scannerModal").classList.remove("show");
-  document.getElementById("scannerContainer").innerHTML = "";
-}
-
-// Service Worker
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js").catch(() => {});
-}
-
 function submitForm() {
   const serial = document.getElementById('serialInput').value.trim();
-  const type = document.querySelector('#typeChips .chip.active') ? document.querySelector('#typeChips .chip.active').dataset.value : '';
+  const type = document.querySelector('#typeChips .chip.active')?.dataset.value || '';
   if (!type) { alert('Выберите тип устройства'); return; }
   if (!serial) { alert('Введите серийный номер'); return; }
 
@@ -380,12 +279,12 @@ function submitForm() {
   btn.innerHTML = '<span>⏳</span> Сохраняем...';
 
   const data = {
-    type: type,
+    type,
     model: document.getElementById('modelInput').value.trim(),
-    serial: serial,
-    org: document.querySelector('#orgChips .chip.active') ? document.querySelector('#orgChips .chip.active').dataset.value : '',
+    serial,
+    org: document.querySelector('#orgChips .chip.active')?.dataset.value || '',
     location: document.getElementById('locationInput').value.trim(),
-    status: document.querySelector('.status-card.active') ? document.querySelector('.status-card.active').dataset.value : '',
+    status: document.querySelector('.status-card.active')?.dataset.value || '',
     date: document.getElementById('dateInput').value,
     photo: photoBase64
   };
@@ -395,11 +294,12 @@ function submitForm() {
     mode: 'no-cors',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
-  }).then(function() {
+  }).then(() => {
     document.getElementById('successScreen').classList.add('show');
     btn.classList.remove('loading');
     btn.innerHTML = '<span>✓</span> Сохранить в таблицу';
-  }).catch(function(err) {
+    if (tg) tg.HapticFeedback?.notificationOccurred('success');
+  }).catch(err => {
     alert('Ошибка: ' + err.message);
     btn.classList.remove('loading');
     btn.innerHTML = '<span>✓</span> Сохранить в таблицу';
@@ -408,8 +308,8 @@ function submitForm() {
 
 function resetForm() {
   document.getElementById('successScreen').classList.remove('show');
-  document.querySelectorAll('.chip').forEach(function(c) { c.classList.remove('active'); });
-  document.querySelectorAll('.status-card').forEach(function(c) { c.classList.remove('active'); });
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.status-card').forEach(c => c.classList.remove('active'));
   document.getElementById('modelInput').value = '';
   document.getElementById('serialInput').value = '';
   document.getElementById('locationInput').value = '';
