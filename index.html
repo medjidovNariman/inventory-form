@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Инвентаризация</title>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+<script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#F5F4F0;--card:#fff;--accent:#1A1A2E;--accent2:#4F6BED;--text:#1A1A2E;--muted:#8A8A9A;--border:#E8E7E3;--success:#2ECC8F;--radius:20px;--shadow:0 4px 24px rgba(26,26,46,.08)}
@@ -114,7 +114,7 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
   <div class="card">
     <div class="field-label"><div class="icon">🖥</div> Тип устройства <span class="required">*</span></div>
     <div class="chips" id="typeChips">
-      <div class="chip" data-value="Моноблок">Моноблок1</div>
+      <div class="chip" data-value="Моноблок">Моноблок</div>
       <div class="chip" data-value="Принтер">Принтер</div>
       <div class="chip" data-value="Ноутбук">Ноутбук</div>
       <div class="chip" data-value="Сканер">Сканер</div>
@@ -292,57 +292,46 @@ document.getElementById('serialInput').addEventListener('input', updateProgress)
 document.getElementById('modelInput').addEventListener('input', updateProgress);
 document.getElementById('locationInput').addEventListener('input', updateProgress);
 
-// SCANNER
-let scannerRunning = false;
+// SCANNER - ZXing
+let codeReader = null;
 
 function openScanner(type) {
-  document.getElementById('scannerModal').classList.add('show');
-  document.getElementById('scannerResult').style.display = 'none';
+  document.getElementById("scannerModal").classList.add("show");
+  document.getElementById("scannerResult").style.display = "none";
 
-  const readers = type === 'qr'
-    ? ['qr_code']
-    : ['code_128_reader','ean_reader','ean_8_reader','code_39_reader','code_93_reader','upc_reader'];
+  // Add video element
+  const container = document.getElementById("scannerContainer");
+  container.innerHTML = '<video id="scannerVideo" style="width:100%;height:100%;object-fit:cover" playsinline></video>';
 
-  Quagga.init({
-    inputStream: {
-      name: 'Live',
-      type: 'LiveStream',
-      target: document.getElementById('scannerContainer'),
-      constraints: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-    },
-    decoder: { readers: readers },
-    locate: true
-  }, function(err) {
-    if (err) {
-      alert('Ошибка камеры: ' + err);
-      closeScanner();
-      return;
+  codeReader = new ZXing.BrowserMultiFormatReader();
+
+  codeReader.decodeFromVideoDevice(null, "scannerVideo", function(result, err) {
+    if (result) {
+      const code = result.getText();
+      document.getElementById("scannerResultText").innerText = code;
+      document.getElementById("scannerResult").style.display = "block";
+      if (navigator.vibrate) navigator.vibrate(100);
+      setTimeout(function() {
+        document.getElementById("serialInput").value = code;
+        updateProgress();
+        closeScanner();
+      }, 1000);
     }
-    Quagga.start();
-    scannerRunning = true;
-  });
-
-  Quagga.onDetected(function(result) {
-    if (!result || !result.codeResult || !result.codeResult.code) return;
-    const code = result.codeResult.code;
-    document.getElementById('scannerResultText').innerText = code;
-    document.getElementById('scannerResult').style.display = 'block';
-    if (navigator.vibrate) navigator.vibrate(100);
-    setTimeout(function() {
-      document.getElementById('serialInput').value = code;
-      updateProgress();
+  }).catch(function(err) {
+    if (err && err.name !== "NotFoundException") {
+      alert("Ошибка камеры: " + err);
       closeScanner();
-    }, 1000);
+    }
   });
 }
 
 function closeScanner() {
-  if (scannerRunning) {
-    try { Quagga.offDetected(); Quagga.stop(); } catch(e) {}
-    scannerRunning = false;
+  if (codeReader) {
+    try { codeReader.reset(); } catch(e) {}
+    codeReader = null;
   }
-  document.getElementById('scannerModal').classList.remove('show');
-  document.getElementById('scannerContainer').innerHTML = '';
+  document.getElementById("scannerModal").classList.remove("show");
+  document.getElementById("scannerContainer").innerHTML = "";
 }
 
 function submitForm() {
