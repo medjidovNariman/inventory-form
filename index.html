@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Инвентаризация</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -37,11 +36,20 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
 .serial-wrap{display:flex;flex-direction:column;gap:10px}
 .serial-input-row{position:relative}
 .serial-input-row .field-input{padding-right:110px}
-.scan-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--accent2);border:none;border-radius:10px;padding:9px 14px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.scan-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--accent2);border:none;border-radius:10px;padding:9px 14px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
 .scan-options{display:flex;gap:8px}
 .scan-option{flex:1;padding:10px;border:1.5px solid var(--border);border-radius:12px;background:var(--bg);font-family:'Manrope',sans-serif;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .2s}
 .scan-option:active{transform:scale(.97)}
 .scan-option .opt-icon{font-size:20px}
+.ocr-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:flex-end}
+.ocr-modal.show{display:flex}
+.ocr-sheet{background:#fff;border-radius:24px 24px 0 0;padding:24px;width:100%;max-height:80vh;overflow-y:auto}
+.ocr-sheet h3{font-size:16px;font-weight:800;margin-bottom:16px}
+.ocr-text{background:var(--bg);border-radius:12px;padding:14px;font-size:13px;font-family:monospace;line-height:1.6;white-space:pre-wrap;max-height:200px;overflow-y:auto;margin-bottom:16px;border:1.5px solid var(--border)}
+.ocr-codes{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.ocr-code-btn{background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:12px 16px;font-family:'Manrope',sans-serif;font-size:14px;font-weight:700;cursor:pointer;text-align:left;color:var(--text)}
+.ocr-code-btn:active{background:rgba(79,107,237,.1);border-color:var(--accent2)}
+.ocr-close{width:100%;background:var(--accent);color:#fff;border:none;border-radius:14px;padding:14px;font-family:'Manrope',sans-serif;font-size:15px;font-weight:700;cursor:pointer}
 .photo-zone{border:2px dashed var(--border);border-radius:16px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s}
 .photo-zone.has-photo{border-style:solid;border-color:var(--success);padding:0}
 .photo-zone .photo-icon{width:48px;height:48px;background:var(--bg);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px}
@@ -50,7 +58,7 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
 .photo-preview{width:100%;height:180px;object-fit:cover;border-radius:14px;display:none}
 .photo-zone.has-photo .photo-preview{display:block}
 .photo-zone.has-photo .photo-placeholder{display:none}
-#photoInput{display:none}
+#photoInput,#ocrInput{display:none}
 .status-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .status-card{border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px}
 .status-card .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
@@ -112,18 +120,14 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
     <div class="serial-wrap">
       <div class="serial-input-row">
         <input class="field-input" type="text" id="serialInput" placeholder="Введите или отсканируйте" autocomplete="off">
-        <button class="scan-btn" onclick="scanBarcode()">📷 Скан</button>
+        <button class="scan-btn" onclick="scanTelegram()">📷 Скан</button>
       </div>
       <div class="scan-options">
-        <div class="scan-option" onclick="scanBarcode()">
-          <div class="opt-icon">▌▌▌</div>
-          <span>Штрихкод</span>
+        <div class="scan-option" onclick="scanTelegram()">
+          <div class="opt-icon">📱</div>
+          <span>QR / Штрихкод</span>
         </div>
-        <div class="scan-option" onclick="scanQR()">
-          <div class="opt-icon">⬛</div>
-          <span>QR-код</span>
-        </div>
-        <div class="scan-option" onclick="scanOCR()">
+        <div class="scan-option" onclick="document.getElementById('ocrInput').click()">
           <div class="opt-icon">🔤</div>
           <span>Фото→Текст</span>
         </div>
@@ -174,13 +178,24 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
       </div>
       <img class="photo-preview" id="photoPreview" src="" alt="Фото">
     </div>
-    <input type="file" id="ocrInput" accept="image/*" capture="environment" onchange="processOCR(this)" style="display:none">
-  <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhoto(this)">
+    <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhoto(this)">
+    <input type="file" id="ocrInput" accept="image/*" capture="environment" onchange="handleOCR(this)">
   </div>
 </div>
 
 <div class="submit-wrap">
   <button class="submit-btn" onclick="submitForm()"><span>✓</span> Сохранить в таблицу</button>
+</div>
+
+<!-- OCR MODAL -->
+<div class="ocr-modal" id="ocrModal" onclick="closeOCR()">
+  <div class="ocr-sheet" onclick="event.stopPropagation()">
+    <h3>🔤 Распознанный текст</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Нажмите на нужный номер чтобы вставить его:</p>
+    <div class="ocr-codes" id="ocrCodes"></div>
+    <div class="ocr-text" id="ocrText"></div>
+    <button class="ocr-close" onclick="closeOCR()">Закрыть</button>
+  </div>
 </div>
 
 <div class="success-screen" id="successScreen">
@@ -190,6 +205,7 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
   <button class="new-btn" onclick="resetForm()">+ Добавить ещё</button>
 </div>
 
+<script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby9C1uahqrfggv-a5pL4gTVplcPGhn3Lmf5oMJuiqqXfLpljW0E3jojkI0bnXMO1ny1eA/exec';
 const tg = window.Telegram?.WebApp;
@@ -214,62 +230,74 @@ function selectStatus(el) {
   updateProgress();
 }
 
-// СКАНЕР через Telegram API
-function scanBarcode() {
+// TELEGRAM SCANNER
+function scanTelegram() {
   if (tg && tg.showScanQrPopup) {
-    // Telegram сканер — читает QR и некоторые штрихкоды
-    tg.showScanQrPopup({ text: "Наведите на QR-код или штрихкод" }, (result) => {
+    tg.showScanQrPopup({ text: 'Наведите на QR-код или штрихкод' }, (result) => {
       if (result) {
-        // Убираем префикс S/N: если есть
-        let code = result.trim();
-        code = code.replace(/^[Ss]\/[Nn][:\s]*/,"").replace(/^[Ss][Nn][:\s]*/,"").trim();
-        document.getElementById("serialInput").value = code;
+        let code = result.trim().replace(/^[Ss]\/[Nn][:\s]*/,'').replace(/^[Ss][Nn][:\s]*/,'').trim();
+        document.getElementById('serialInput').value = code;
         updateProgress();
         tg.closeScanQrPopup();
         return true;
       }
     });
   } else {
-    // Вне Telegram — предлагаем ввести вручную
-    const input = document.getElementById("serialInput");
-    input.focus();
-    alert("Сканер работает только в Telegram. Введите номер вручную или скопируйте из приложения сканера.");
+    alert('Сканер работает только в Telegram Mini App.\nВведите номер вручную или используйте "Фото→Текст".');
   }
 }
 
-function scanQR() {
-
-function scanOCR() {
-  document.getElementById("ocrInput").click();
-}
-
-async function processOCR(input) {
+// OCR - фото в текст
+async function handleOCR(input) {
   if (!input.files || !input.files[0]) return;
-  const serialInput = document.getElementById("serialInput");
-  serialInput.placeholder = "⏳ Распознаём...";
+  const serialInput = document.getElementById('serialInput');
+  serialInput.placeholder = '⏳ Распознаём...';
+
   try {
-    const result = await Tesseract.recognize(input.files[0], "eng");
+    const worker = await Tesseract.createWorker('eng');
+    const result = await worker.recognize(input.files[0]);
+    await worker.terminate();
     const text = result.data.text;
-    let serial = "";
-    const snMatch = text.match(/(?:S/N|SN|Serial)[:\s#]*([A-Z0-9\-]{4,20})/i);
-    if (snMatch) { serial = snMatch[1]; }
-    else {
-      const codes = text.match(/[A-Z0-9]{6,20}/g);
-      if (codes) serial = codes[0];
+
+    // Ищем все коды похожие на серийные номера
+    const codes = [];
+    const snMatch = text.match(/(?:S\/N|SN|Serial\s*No?)[:\s#]*([A-Z0-9\-]{4,25})/gi);
+    if (snMatch) {
+      snMatch.forEach(m => {
+        const val = m.replace(/^(?:S\/N|SN|Serial\s*No?)[:\s#]*/i,'').trim();
+        if (val) codes.push(val);
+      });
     }
-    if (serial) {
-      serialInput.value = serial;
-      updateProgress();
-    } else {
-      alert("Не удалось распознать. Показываю весь текст:\n" + text.substring(0,300));
-    }
+    const allCodes = text.match(/[A-Z0-9][A-Z0-9\-]{5,24}/g);
+    if (allCodes) allCodes.forEach(c => { if (!codes.includes(c)) codes.push(c); });
+
+    // Показываем модальное окно
+    const codesDiv = document.getElementById('ocrCodes');
+    codesDiv.innerHTML = '';
+    codes.slice(0, 6).forEach(code => {
+      const btn = document.createElement('button');
+      btn.className = 'ocr-code-btn';
+      btn.textContent = code;
+      btn.onclick = () => {
+        serialInput.value = code;
+        updateProgress();
+        closeOCR();
+      };
+      codesDiv.appendChild(btn);
+    });
+
+    document.getElementById('ocrText').textContent = text;
+    document.getElementById('ocrModal').classList.add('show');
+
   } catch(e) {
-    alert("Ошибка: " + e.message);
+    alert('Ошибка распознавания. Попробуйте ещё раз.');
   }
-  serialInput.placeholder = "Введите или отсканируйте";
-  input.value = "";
+  serialInput.placeholder = 'Введите или отсканируйте';
+  input.value = '';
 }
-  scanBarcode();
+
+function closeOCR() {
+  document.getElementById('ocrModal').classList.remove('show');
 }
 
 let photoBase64 = '';
