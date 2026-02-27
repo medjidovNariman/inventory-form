@@ -205,7 +205,7 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
   <button class="new-btn" onclick="resetForm()">+ Добавить ещё</button>
 </div>
 
-<script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
+
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby9C1uahqrfggv-a5pL4gTVplcPGhn3Lmf5oMJuiqqXfLpljW0E3jojkI0bnXMO1ny1eA/exec';
 const tg = window.Telegram?.WebApp;
@@ -247,25 +247,61 @@ function scanTelegram() {
   }
 }
 
-// OCR - фото в текст
+// OCR - Google Vision API
+const VISION_KEY = 'AIzaSyDDuji6HiIIuw8PamF9iLbxkBBly3njh44';
+
 async function handleOCR(input) {
   if (!input.files || !input.files[0]) return;
   const serialInput = document.getElementById('serialInput');
   serialInput.placeholder = '⏳ Распознаём...';
 
   try {
-    const worker = await Tesseract.createWorker('eng');
-    const result = await worker.recognize(input.files[0]);
-    await worker.terminate();
-    const text = result.data.text;
+    // Сжимаем фото
+    const base64 = await new Promise((resolve) => {
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = e => {
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX = 1200;
+          let w = img.width, h = img.height;
+          if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+          else { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.9).split(',')[1]);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(input.files[0]);
+    });
 
-    // Ищем все коды похожие на серийные номера
+    // Отправляем в Google Vision
+    const response = await fetch(
+      'https://vision.googleapis.com/v1/images:annotate?key=' + VISION_KEY,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requests: [{
+            image: { content: base64 },
+            features: [{ type: 'TEXT_DETECTION' }]
+          }]
+        })
+      }
+    );
+    const data = await response.json();
+    const text = data.responses[0]?.fullTextAnnotation?.text || '';
+
+    if (!text) { alert('Текст не найден. Попробуйте сфотографировать чётче.'); return; }
+
+    // Ищем серийные номера
     const codes = [];
-    const snMatch = text.match(/(?:S\/N|SN|Serial\s*No?)[:\s#]*([A-Z0-9\-]{4,25})/gi);
+    const snMatch = text.match(/(?:S\/N|SN|Serial)[:\s#]*([A-Z0-9\-]{4,25})/gi);
     if (snMatch) {
       snMatch.forEach(m => {
-        const val = m.replace(/^(?:S\/N|SN|Serial\s*No?)[:\s#]*/i,'').trim();
-        if (val) codes.push(val);
+        const val = m.replace(/^(?:S\/N|SN|Serial)[:\s#]*/i,'').trim();
+        if (val && !codes.includes(val)) codes.push(val);
       });
     }
     const allCodes = text.match(/[A-Z0-9][A-Z0-9\-]{5,24}/g);
@@ -274,7 +310,7 @@ async function handleOCR(input) {
     // Показываем модальное окно
     const codesDiv = document.getElementById('ocrCodes');
     codesDiv.innerHTML = '';
-    codes.slice(0, 6).forEach(code => {
+    codes.slice(0, 8).forEach(code => {
       const btn = document.createElement('button');
       btn.className = 'ocr-code-btn';
       btn.textContent = code;
@@ -290,7 +326,7 @@ async function handleOCR(input) {
     document.getElementById('ocrModal').classList.add('show');
 
   } catch(e) {
-    alert('Ошибка распознавания. Попробуйте ещё раз.');
+    alert('Ошибка: ' + e.message);
   }
   serialInput.placeholder = 'Введите или отсканируйте';
   input.value = '';
