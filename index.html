@@ -127,9 +127,9 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
           <div class="opt-icon">📱</div>
           <span>QR / Штрихкод</span>
         </div>
-        <div class="scan-option" onclick="document.getElementById('ocrInput').click()">
-          <div class="opt-icon">🔤</div>
-          <span>Фото→Текст</span>
+        <div class="scan-option" onclick="openBinaryEye()">
+          <div class="opt-icon">📷</div>
+          <span>Binary Eye</span>
         </div>
         <div class="scan-option" onclick="document.getElementById('serialInput').focus()">
           <div class="opt-icon">⌨️</div>
@@ -212,6 +212,24 @@ const tg = window.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
 
 const today = new Date().toISOString().split('T')[0];
+
+// Читаем результат сканирования от Binary Eye
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const scan = params.get('scan') || params.get('content');
+  if (scan) {
+    setTimeout(() => {
+      const serialInput = document.getElementById('serialInput');
+      serialInput.value = decodeURIComponent(scan).trim();
+      updateProgress();
+      // Убираем параметр из URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      // Подсвечиваем поле
+      serialInput.style.borderColor = 'var(--success)';
+      setTimeout(() => { serialInput.style.borderColor = ''; }, 2000);
+    }, 300);
+  }
+})();
 document.getElementById('dateInput').value = today;
 
 ['typeChips','orgChips'].forEach(id => {
@@ -228,6 +246,22 @@ function selectStatus(el) {
   document.querySelectorAll('.status-card').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
   updateProgress();
+}
+
+// BINARY EYE SCANNER
+function openBinaryEye() {
+  const returnUrl = encodeURIComponent(
+    window.location.href.split('?')[0] + '?scan={content}'
+  );
+  window.location.href = 'de.markusfisch.android.binaryeye://scan?ret=' + returnUrl;
+}
+
+// BINARY EYE SCANNER
+function openBinaryEye() {
+  const returnUrl = encodeURIComponent(
+    window.location.href.split('?')[0] + '?scan={content}'
+  );
+  window.location.href = 'de.markusfisch.android.binaryeye://scan?ret=' + returnUrl;
 }
 
 // TELEGRAM SCANNER
