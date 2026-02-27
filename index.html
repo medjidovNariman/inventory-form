@@ -72,6 +72,9 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
 .photo-zone.has-photo .photo-preview{display:block}
 .photo-zone.has-photo .photo-placeholder{display:none}
 #photoInput{display:none}
+.lens-hint{background:#F0F4FF;border-radius:14px;padding:14px;margin-top:10px}
+.lens-hint p{font-size:13px;color:var(--text);margin-bottom:6px;font-weight:500}
+.lens-hint p::before{content:"• ";color:var(--accent2)}
 .status-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .status-card{border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px}
 .status-card:active{transform:scale(.97)}
@@ -134,22 +137,27 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
     <div class="field-label"><div class="icon">🔢</div> Серийный номер <span class="required">*</span></div>
     <div class="serial-wrap">
       <div class="serial-input-row">
-        <input class="field-input" type="text" id="serialInput" placeholder="Введите вручную или отсканируйте" autocomplete="off">
-        <button class="scan-btn" onclick="openScanner('barcode')">📷 Скан</button>
+        <input class="field-input" type="text" id="serialInput" placeholder="Введите или вставьте из Lens" autocomplete="off">
       </div>
       <div class="scan-options">
-        <div class="scan-option" onclick="openScanner('barcode')">
-          <div class="opt-icon">▌▌▌</div>
-          <span>Штрихкод</span>
+        <div class="scan-option" onclick="openGoogleLens()">
+          <div class="opt-icon">🔍</div>
+          <span>Google Lens</span>
         </div>
-        <div class="scan-option" onclick="openScanner('qr')">
-          <div class="opt-icon">⬛</div>
-          <span>QR-код</span>
+        <div class="scan-option" onclick="openBarcodeCamera()">
+          <div class="opt-icon">📷</div>
+          <span>Камера</span>
         </div>
         <div class="scan-option" onclick="document.getElementById('serialInput').focus()">
           <div class="opt-icon">⌨️</div>
           <span>Вручную</span>
         </div>
+      </div>
+      <div class="lens-hint" id="lensHint" style="display:none">
+        <p>1. Google Lens открылся</p>
+        <p>2. Наведи на штрихкод или серийный номер</p>
+        <p>3. Скопируй текст → вернись сюда → вставь (долгое нажатие на поле)</p>
+        <button onclick="document.getElementById('lensHint').style.display='none';document.getElementById('serialInput').focus()" style="margin-top:10px;background:var(--accent2);color:#fff;border:none;border-radius:10px;padding:8px 16px;font-family:Manrope,sans-serif;font-size:13px;font-weight:700;cursor:pointer;width:100%">Вставить номер →</button>
       </div>
     </div>
   </div>
@@ -292,32 +300,31 @@ document.getElementById('serialInput').addEventListener('input', updateProgress)
 document.getElementById('modelInput').addEventListener('input', updateProgress);
 document.getElementById('locationInput').addEventListener('input', updateProgress);
 
-// SCANNER - Binary Eye
-function openScanner(type) {
-  // Сохраняем текущий URL для возврата
-  const returnUrl = encodeURIComponent(window.location.href + "?scan={CODE}");
+// Google Lens & Camera
+function openGoogleLens() {
+  // Открываем Google Lens
+  const lensUrl = "googlelens://";
+  const fallback = "https://lens.google.com";
   
-  // Binary Eye Intent URL для Android
-  const binaryEyeUrl = "de.markusfisch.android.binaryeye://scan?ret=" + returnUrl;
+  // Показываем инструкцию
+  document.getElementById("lensHint").style.display = "block";
+  document.getElementById("lensHint").scrollIntoView({ behavior: "smooth" });
   
-  // Пробуем открыть Binary Eye
-  window.location.href = binaryEyeUrl;
+  // Пробуем открыть приложение Lens
+  setTimeout(() => { window.location.href = lensUrl; }, 300);
+  setTimeout(() => {
+    // Если приложение не открылось - открываем веб версию
+    window.open(fallback, "_blank");
+  }, 1500);
 }
 
-// Получаем результат сканирования из URL
-function checkScanResult() {
-  const params = new URLSearchParams(window.location.search);
-  const scan = params.get("scan");
-  if (scan && scan !== "{CODE}") {
-    document.getElementById("serialInput").value = decodeURIComponent(scan);
-    updateProgress();
-    // Убираем параметр из URL
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }
+function openBarcodeCamera() {
+  // Открываем нативную камеру телефона
+  document.getElementById("lensHint").style.display = "block";
+  document.getElementById("lensHint").scrollIntoView({ behavior: "smooth" });
+  // Фокусируем поле для вставки
+  setTimeout(() => { document.getElementById("serialInput").focus(); }, 500);
 }
-
-// Проверяем при загрузке страницы
-window.addEventListener("load", checkScanResult);
 
 function closeScanner() {}
 
