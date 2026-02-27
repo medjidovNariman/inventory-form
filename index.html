@@ -307,7 +307,8 @@ function openGoogleLens() {
   
   // Intent для QR & Barcode Scanner (Gamma Play)
   const returnUrl = encodeURIComponent(window.location.href.split("?")[0] + "?scan={CODE}");
-  window.location.href = "intent://scan/#Intent;scheme=zxing;package=com.gamma.scan;end";
+  const returnUrl = encodeURIComponent(window.location.href.split('?')[0] + '?scan={RESULT}');
+  window.location.href = 'de.markusfisch.android.binaryeye://scan?ret=' + returnUrl + '&format=CODE_128&format=QR_CODE&format=EAN_13&format=EAN_8&format=CODE_39';
 }
 
 function openBarcodeCamera() {
@@ -319,7 +320,7 @@ function closeScanner() {}
 // Получаем результат из URL
 function checkScanResult() {
   const params = new URLSearchParams(window.location.search);
-  const scan = params.get("scan");
+  const scan = params.get('scan');
   if (scan && scan !== "{CODE}") {
     document.getElementById("serialInput").value = decodeURIComponent(scan);
     updateProgress();
