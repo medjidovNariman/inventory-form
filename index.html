@@ -117,7 +117,7 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
   <div class="card">
     <div class="field-label"><div class="icon">🖥</div> Тип устройства <span class="required">*</span></div>
     <div class="chips" id="typeChips">
-      <div class="chip" data-value="Моноблок">Моноблок1</div>
+      <div class="chip" data-value="Моноблок">Моноблок</div>
       <div class="chip" data-value="Принтер">Принтер</div>
       <div class="chip" data-value="Ноутбук">Ноутбук</div>
       <div class="chip" data-value="Сканер">Сканер</div>
@@ -154,9 +154,9 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
         </div>
       </div>
       <div class="lens-hint" id="lensHint" style="display:none">
-        <p>1. Google Lens открылся</p>
-        <p>2. Наведи на штрихкод или серийный номер</p>
-        <p>3. Скопируй текст → вернись сюда → вставь (долгое нажатие на поле)</p>
+        <p>1. Нажми кнопку ниже — откроется Объектив</p>
+        <p>2. Наведи на штрихкод или текст с серийным номером</p>
+        <p>3. Выдели и скопируй номер → вернись сюда → вставь</p>
         <button onclick="document.getElementById('lensHint').style.display='none';document.getElementById('serialInput').focus()" style="margin-top:10px;background:var(--accent2);color:#fff;border:none;border-radius:10px;padding:8px 16px;font-family:Manrope,sans-serif;font-size:13px;font-weight:700;cursor:pointer;width:100%">Вставить номер →</button>
       </div>
     </div>
@@ -300,29 +300,25 @@ document.getElementById('serialInput').addEventListener('input', updateProgress)
 document.getElementById('modelInput').addEventListener('input', updateProgress);
 document.getElementById('locationInput').addEventListener('input', updateProgress);
 
-// Google Lens & Camera
+// Google Lens (Объектив) & Camera
 function openGoogleLens() {
-  // Открываем Google Lens
-  const lensUrl = "googlelens://";
-  const fallback = "https://lens.google.com";
-  
-  // Показываем инструкцию
   document.getElementById("lensHint").style.display = "block";
   document.getElementById("lensHint").scrollIntoView({ behavior: "smooth" });
   
-  // Пробуем открыть приложение Lens
-  setTimeout(() => { window.location.href = lensUrl; }, 300);
-  setTimeout(() => {
-    // Если приложение не открылось - открываем веб версию
-    window.open(fallback, "_blank");
-  }, 1500);
+  // Пробуем разные способы открыть Google Lens / Объектив
+  const intents = [
+    "intent://lens/#Intent;scheme=googleapp;package=com.google.android.googlequicksearchbox;action=com.google.android.apps.lens.LENS_ACTIVITY;end",
+    "intent:#Intent;action=com.google.android.apps.lens.LENS_ACTIVITY;package=com.google.android.googlequicksearchbox;end",
+    "intent://scan/#Intent;scheme=zxing;package=com.google.android.googlequicksearchbox;end"
+  ];
+  
+  // Открываем через intent
+  window.location.href = intents[0];
 }
 
 function openBarcodeCamera() {
-  // Открываем нативную камеру телефона
   document.getElementById("lensHint").style.display = "block";
   document.getElementById("lensHint").scrollIntoView({ behavior: "smooth" });
-  // Фокусируем поле для вставки
   setTimeout(() => { document.getElementById("serialInput").focus(); }, 500);
 }
 
