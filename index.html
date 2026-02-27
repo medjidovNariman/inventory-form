@@ -117,7 +117,7 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
   <div class="card">
     <div class="field-label"><div class="icon">🖥</div> Тип устройства <span class="required">*</span></div>
     <div class="chips" id="typeChips">
-      <div class="chip" data-value="Моноблок">Моноблок1</div>
+      <div class="chip" data-value="Моноблок">Моноблок</div>
       <div class="chip" data-value="Принтер">Принтер</div>
       <div class="chip" data-value="Ноутбук">Ноутбук</div>
       <div class="chip" data-value="Сканер">Сканер</div>
@@ -307,7 +307,7 @@ function openGoogleLens() {
   
   // Intent для QR & Barcode Scanner (Gamma Play)
   const returnUrl = encodeURIComponent(window.location.href.split("?")[0] + "?scan={CODE}");
-  window.location.href = "intent://scan/#Intent;scheme=zxing;package=com.gamma.scan;S.browser_fallback_url=https://play.google.com/store/apps/details?id=com.gamma.scan;end";
+  window.location.href = "intent://scan/#Intent;scheme=zxing;package=com.gamma.scan;end";
 }
 
 function openBarcodeCamera() {
