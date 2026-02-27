@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Инвентаризация">
+<meta name="theme-color" content="#1A1A2E">
+<link rel="manifest" href="manifest.json">
+<title>Инвентаризация</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#F5F4F0;--card:#fff;--accent:#1A1A2E;--accent2:#4F6BED;--text:#1A1A2E;--muted:#8A8A9A;--border:#E8E7E3;--success:#2ECC8F;--radius:20px;--shadow:0 4px 24px rgba(26,26,46,.08)}
+body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:40px}
+.header{background:var(--accent);padding:52px 24px 28px;position:relative;overflow:hidden}
+.header::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:var(--accent2);opacity:.15}
+.header-tag{display:inline-block;background:rgba(79,107,237,.2);color:#8FA3F8;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5px 12px;border-radius:100px;margin-bottom:12px}
+.header h1{color:#fff;font-size:26px;font-weight:800;line-height:1.2;position:relative;z-index:1}
+.header p{color:rgba(255,255,255,.5);font-size:13px;margin-top:6px;position:relative;z-index:1}
+.progress-wrap{padding:20px 24px 0}
+.progress-bar{height:4px;background:var(--border);border-radius:100px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent2);border-radius:100px;transition:width .4s ease;width:0%}
+.progress-label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:8px}
+.form-wrap{padding:20px 20px 0;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);animation:slideUp .4s ease both}
+@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.card:nth-child(1){animation-delay:.05s}.card:nth-child(2){animation-delay:.1s}.card:nth-child(3){animation-delay:.15s}
+.card:nth-child(4){animation-delay:.2s}.card:nth-child(5){animation-delay:.25s}.card:nth-child(6){animation-delay:.3s}
+.field-label{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.field-label .icon{width:20px;height:20px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px}
+.required{color:var(--accent2)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:8px 14px;border-radius:100px;border:1.5px solid var(--border);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .2s;background:transparent;white-space:nowrap}
+.chip:active{transform:scale(.95)}
+.chip.active{border-color:var(--accent2);color:var(--accent2);background:rgba(79,107,237,.08)}
+.field-input{width:100%;border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;font-family:'Manrope',sans-serif;font-size:15px;font-weight:500;color:var(--text);background:var(--bg);outline:none;transition:border-color .2s;-webkit-appearance:none}
+.field-input:focus{border-color:var(--accent2);background:#fff}
+.field-input::placeholder{color:var(--muted);font-weight:400}
+.serial-wrap{display:flex;flex-direction:column;gap:10px}
+.serial-input-row{position:relative}
+.serial-input-row .field-input{padding-right:100px}
+.scan-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--accent2);border:none;border-radius:10px;padding:9px 14px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px}
+.scan-options{display:flex;gap:8px}
+.scan-option{flex:1;padding:10px;border:1.5px solid var(--border);border-radius:12px;background:var(--bg);font-family:'Manrope',sans-serif;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .2s}
+.scan-option:active{transform:scale(.97)}
+.scan-option .opt-icon{font-size:20px}
+.scanner-modal{display:none;position:fixed;inset:0;background:#000;z-index:200;flex-direction:column}
+.scanner-modal.show{display:flex}
+.scanner-header{padding:52px 20px 16px;display:flex;align-items:center;justify-content:space-between;position:absolute;top:0;left:0;right:0;z-index:10;background:linear-gradient(to bottom,rgba(0,0,0,.7),transparent)}
+.scanner-title{color:#fff;font-size:16px;font-weight:700}
+.scanner-close{background:rgba(255,255,255,.2);border:none;border-radius:50%;width:38px;height:38px;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#scannerContainer{width:100%;height:100%;position:relative}
+#scannerContainer video{width:100%!important;height:100%!important;object-fit:cover}
+#scannerContainer canvas{position:absolute!important;top:0;left:0;width:100%!important;height:100%!important}
+.scanner-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.scanner-frame{width:280px;height:140px;border:2px solid var(--accent2);border-radius:16px;position:relative}
+.scanner-frame::before{content:'';position:absolute;left:4px;right:4px;height:2px;background:rgba(79,107,237,.8);top:0;animation:scanLine 1.8s ease-in-out infinite}
+@keyframes scanLine{0%,100%{top:4px}50%{top:calc(100% - 6px)}}
+.corner{position:absolute;width:20px;height:20px;border-color:var(--accent2);border-style:solid}
+.corner-tl{top:-2px;left:-2px;border-width:3px 0 0 3px;border-radius:4px 0 0 0}
+.corner-tr{top:-2px;right:-2px;border-width:3px 3px 0 0;border-radius:0 4px 0 0}
+.corner-bl{bottom:-2px;left:-2px;border-width:0 0 3px 3px;border-radius:0 0 0 4px}
+.corner-br{bottom:-2px;right:-2px;border-width:0 3px 3px 0;border-radius:0 0 4px 0}
+.scanner-hint{color:rgba(255,255,255,.7);font-size:13px;margin-top:20px;text-align:center;font-family:'Manrope',sans-serif}
+.scanner-result-bar{position:absolute;bottom:0;left:0;right:0;background:var(--success);padding:20px 24px 36px;color:#fff;font-family:'Manrope',sans-serif;display:none}
+.scanner-result-bar .res-label{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:.8;margin-bottom:4px}
+.scanner-result-bar .res-value{font-size:20px;font-weight:800}
+.photo-zone{border:2px dashed var(--border);border-radius:16px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s}
+.photo-zone.has-photo{border-style:solid;border-color:var(--success);padding:0}
+.photo-zone .photo-icon{width:48px;height:48px;background:var(--bg);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px}
+.photo-zone p{font-size:14px;font-weight:600;color:var(--text)}
+.photo-zone span{font-size:12px;color:var(--muted);margin-top:4px;display:block}
+.photo-preview{width:100%;height:180px;object-fit:cover;border-radius:14px;display:none}
+.photo-zone.has-photo .photo-preview{display:block}
+.photo-zone.has-photo .photo-placeholder{display:none}
+#photoInput{display:none}
+.lens-hint{background:#F0F4FF;border-radius:14px;padding:14px;margin-top:10px}
+.lens-hint p{font-size:13px;color:var(--text);margin-bottom:6px;font-weight:500}
+.lens-hint p::before{content:"• ";color:var(--accent2)}
+.status-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.status-card{border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px}
+.status-card:active{transform:scale(.97)}
+.status-card .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.status-card span{font-size:13px;font-weight:600;color:var(--muted)}
+.status-card.active span{color:var(--text)}
+.status-work .dot{background:var(--success)}.status-work.active{border-color:var(--success);background:rgba(46,204,143,.06)}
+.status-repair .dot{background:#F39C12}.status-repair.active{border-color:#F39C12;background:rgba(243,156,18,.06)}
+.status-broken .dot{background:#E74C3C}.status-broken.active{border-color:#E74C3C;background:rgba(231,76,60,.06)}
+.status-storage .dot{background:#95A5A6}.status-storage.active{border-color:#95A5A6;background:rgba(149,165,166,.06)}
+.date-input{width:100%;border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;font-family:'Manrope',sans-serif;font-size:15px;font-weight:500;color:var(--text);background:var(--bg);outline:none;-webkit-appearance:none}
+.date-input:focus{border-color:var(--accent2)}
+.submit-wrap{padding:20px}
+.submit-btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:18px;font-family:'Manrope',sans-serif;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s;box-shadow:0 8px 24px rgba(26,26,46,.25)}
+.submit-btn:active{transform:scale(.98)}
+.submit-btn.loading{opacity:.7;pointer-events:none}
+.success-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:100;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center}
+.success-screen.show{display:flex}
+.success-icon{width:80px;height:80px;background:var(--success);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:24px;animation:popIn .5s cubic-bezier(.175,.885,.32,1.275) both}
+@keyframes popIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.success-screen h2{font-size:24px;font-weight:800;margin-bottom:8px}
+.success-screen p{color:var(--muted);font-size:14px;margin-bottom:32px}
+.new-btn{background:var(--accent2);color:#fff;border:none;border-radius:100px;padding:14px 32px;font-family:'Manrope',sans-serif;font-size:15px;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-tag">📦 Инвентаризация</div>
+  <h1>Добавить<br>устройство</h1>
+  <p>Заполните данные об оборудовании</p>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-label"><span>Прогресс заполнения</span><span id="progressText">0%</span></div>
+</div>
+
+<div class="form-wrap">
+  <div class="card">
+    <div class="field-label"><div class="icon">🖥</div> Тип устройства <span class="required">*</span></div>
+    <div class="chips" id="typeChips">
+      <div class="chip" data-value="Моноблок">Моноблок</div>
+      <div class="chip" data-value="Принтер">Принтер</div>
+      <div class="chip" data-value="Ноутбук">Ноутбук</div>
+      <div class="chip" data-value="Сканер">Сканер</div>
+      <div class="chip" data-value="ТСД">ТСД</div>
+      <div class="chip" data-value="Монитор">Монитор</div>
+      <div class="chip" data-value="Коммутатор">Коммутатор</div>
+      <div class="chip" data-value="Другое">Другое</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="field-label"><div class="icon">🏷</div> Модель</div>
+    <input class="field-input" type="text" id="modelInput" placeholder="Например: HPRT HT300" autocomplete="off">
+  </div>
+
+  <div class="card">
+    <div class="field-label"><div class="icon">🔢</div> Серийный номер <span class="required">*</span></div>
+    <div class="serial-wrap">
+      <div class="serial-input-row">
+        <input class="field-input" type="text" id="serialInput" placeholder="Введите или отсканируйте" autocomplete="off">
+        <button class="scan-btn" onclick="openScanner()">📷 Скан</button>
+      </div>
+      <div class="scan-options">
+        <div class="scan-option" onclick="openScanner('barcode')">
+          <div class="opt-icon">▌▌▌</div>
+          <span>Штрихкод</span>
+        </div>
+        <div class="scan-option" onclick="openScanner('qr')">
+          <div class="opt-icon">⬛</div>
+          <span>QR-код</span>
+        </div>
+        <div class="scan-option" onclick="document.getElementById('serialInput').focus()">
+          <div class="opt-icon">⌨️</div>
+          <span>Вручную</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="field-label"><div class="icon">🏢</div> Организация</div>
+    <div class="chips" id="orgChips">
+      <div class="chip" data-value="Вектор">Вектор</div>
+      <div class="chip" data-value="Обер">Обер</div>
+      <div class="chip" data-value="Другая">Другая</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="field-label"><div class="icon">📍</div> Местоположение</div>
+    <input class="field-input" type="text" id="locationInput" placeholder="Например: Склад 1 Этаж" autocomplete="off">
+  </div>
+
+  <div class="card">
+    <div class="field-label"><div class="icon">✅</div> Статус</div>
+    <div class="status-grid">
+      <div class="status-card status-work" data-value="Работает" onclick="selectStatus(this)"><div class="dot"></div><span>Работает</span></div>
+      <div class="status-card status-repair" data-value="На ремонте" onclick="selectStatus(this)"><div class="dot"></div><span>На ремонте</span></div>
+      <div class="status-card status-broken" data-value="Не работает" onclick="selectStatus(this)"><div class="dot"></div><span>Не работает</span></div>
+      <div class="status-card status-storage" data-value="На складе" onclick="selectStatus(this)"><div class="dot"></div><span>На складе</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="field-label"><div class="icon">📅</div> Дата проверки</div>
+    <input class="date-input" type="date" id="dateInput">
+  </div>
+
+  <div class="card">
+    <div class="field-label"><div class="icon">📸</div> Фото устройства</div>
+    <div class="photo-zone" onclick="document.getElementById('photoInput').click()">
+      <div class="photo-placeholder">
+        <div class="photo-icon">📷</div>
+        <p>Добавить фото</p>
+        <span>Нажмите чтобы сфотографировать</span>
+      </div>
+      <img class="photo-preview" id="photoPreview" src="" alt="Фото">
+    </div>
+    <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhoto(this)">
+  </div>
+</div>
+
+<div class="submit-wrap">
+  <button class="submit-btn" onclick="submitForm()"><span>✓</span> Сохранить в таблицу</button>
+</div>
+
+<!-- SCANNER -->
+<div class="scanner-modal" id="scannerModal">
+  <div class="scanner-header">
+    <span class="scanner-title">Сканирование</span>
+    <button class="scanner-close" onclick="closeScanner()">✕</button>
+  </div>
+  <div id="scannerContainer"></div>
+  <div class="scanner-overlay">
+    <div class="scanner-frame">
+      <div class="corner corner-tl"></div>
+      <div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div>
+      <div class="corner corner-br"></div>
+    </div>
+    <div class="scanner-hint">Наведите камеру на штрихкод или QR-код</div>
+  </div>
+  <div class="scanner-result-bar" id="scannerResult">
+    <div class="res-label">Распознано</div>
+    <div class="res-value" id="scannerResultText"></div>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div class="success-screen" id="successScreen">
+  <div class="success-icon">✓</div>
+  <h2>Сохранено!</h2>
+  <p>Устройство добавлено<br>в таблицу инвентаризации</p>
+  <button class="new-btn" onclick="resetForm()">+ Добавить ещё</button>
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby9C1uahqrfggv-a5pL4gTVplcPGhn3Lmf5oMJuiqqXfLpljW0E3jojkI0bnXMO1ny1eA/exec';
+const today = new Date().toISOString().split('T')[0];
+document.getElementById('dateInput').value = today;
+
+['typeChips','orgChips'].forEach(id => {
+  document.getElementById(id).querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.getElementById(id).querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      updateProgress();
+    });
+  });
+});
+
+function selectStatus(el) {
+  document.querySelectorAll('.status-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  updateProgress();
+}
+
+let photoBase64 = '';
+function handlePhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = e => {
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX = 600;
+      let w = img.width, h = img.height;
+      if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+      else { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      photoBase64 = canvas.toDataURL('image/jpeg', 0.5);
+      document.getElementById('photoPreview').src = photoBase64;
+      document.querySelector('.photo-zone').classList.add('has-photo');
+      updateProgress();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function updateProgress() {
+  let filled = 0;
+  if (document.querySelector('#typeChips .chip.active')) filled++;
+  if (document.getElementById('serialInput').value.trim()) filled++;
+  if (document.querySelector('.status-card.active')) filled++;
+  if (document.querySelector('#orgChips .chip.active')) filled++;
+  if (document.querySelector('.photo-zone.has-photo')) filled++;
+  const pct = Math.round(filled / 5 * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').innerText = pct + '%';
+}
+
+document.getElementById('serialInput').addEventListener('input', updateProgress);
+document.getElementById('modelInput').addEventListener('input', updateProgress);
+document.getElementById('locationInput').addEventListener('input', updateProgress);
+
+// SCANNER - ZXing
+let codeReader = null;
+
+function openScanner(type) {
+  document.getElementById("scannerModal").classList.add("show");
+  document.getElementById("scannerResult").style.display = "none";
+  const container = document.getElementById("scannerContainer");
+  container.innerHTML = '<video id="scannerVideo" style="width:100%;height:100%;object-fit:cover" playsinline autoplay muted></video>';
+
+  const hints = new Map();
+  const formats = type === "qr"
+    ? [ZXing.BarcodeFormat.QR_CODE]
+    : [ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8,
+       ZXing.BarcodeFormat.CODE_39, ZXing.BarcodeFormat.CODE_93, ZXing.BarcodeFormat.UPC_A];
+  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+  hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+
+  codeReader = new ZXing.BrowserMultiFormatReader(hints);
+
+  navigator.mediaDevices.getUserMedia({
+    video: {
+      facingMode: { exact: "environment" },
+      width: { ideal: 1920 },
+      height: { ideal: 1080 }
+    }
+  }).then(stream => {
+    const video = document.getElementById("scannerVideo");
+    video.srcObject = stream;
+    video.play();
+    codeReader.decodeFromVideoElement(video).then(result => {
+      const code = result.getText();
+      document.getElementById("scannerResultText").innerText = code;
+      document.getElementById("scannerResult").style.display = "block";
+      if (navigator.vibrate) navigator.vibrate(100);
+      setTimeout(() => {
+        document.getElementById("serialInput").value = code;
+        updateProgress();
+        closeScanner();
+      }, 1000);
+    }).catch(() => {});
+  }).catch(err => {
+    alert("Нет доступа к камере: " + err);
+    closeScanner();
+  });
+}
+
+function closeScanner() {
+  if (codeReader) { try { codeReader.reset(); } catch(e) {} codeReader = null; }
+  const v = document.getElementById("scannerVideo");
+  if (v && v.srcObject) v.srcObject.getTracks().forEach(t => t.stop());
+  document.getElementById("scannerModal").classList.remove("show");
+  document.getElementById("scannerContainer").innerHTML = "";
+}
+
+// Service Worker
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
+function submitForm() {
+  const serial = document.getElementById('serialInput').value.trim();
+  const type = document.querySelector('#typeChips .chip.active') ? document.querySelector('#typeChips .chip.active').dataset.value : '';
+  if (!type) { alert('Выберите тип устройства'); return; }
+  if (!serial) { alert('Введите серийный номер'); return; }
+
+  const btn = document.querySelector('.submit-btn');
+  btn.classList.add('loading');
+  btn.innerHTML = '<span>⏳</span> Сохраняем...';
+
+  const data = {
+    type: type,
+    model: document.getElementById('modelInput').value.trim(),
+    serial: serial,
+    org: document.querySelector('#orgChips .chip.active') ? document.querySelector('#orgChips .chip.active').dataset.value : '',
+    location: document.getElementById('locationInput').value.trim(),
+    status: document.querySelector('.status-card.active') ? document.querySelector('.status-card.active').dataset.value : '',
+    date: document.getElementById('dateInput').value,
+    photo: photoBase64
+  };
+
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  }).then(function() {
+    document.getElementById('successScreen').classList.add('show');
+    btn.classList.remove('loading');
+    btn.innerHTML = '<span>✓</span> Сохранить в таблицу';
+  }).catch(function(err) {
+    alert('Ошибка: ' + err.message);
+    btn.classList.remove('loading');
+    btn.innerHTML = '<span>✓</span> Сохранить в таблицу';
+  });
+}
+
+function resetForm() {
+  document.getElementById('successScreen').classList.remove('show');
+  document.querySelectorAll('.chip').forEach(function(c) { c.classList.remove('active'); });
+  document.querySelectorAll('.status-card').forEach(function(c) { c.classList.remove('active'); });
+  document.getElementById('modelInput').value = '';
+  document.getElementById('serialInput').value = '';
+  document.getElementById('locationInput').value = '';
+  document.getElementById('dateInput').value = today;
+  photoBase64 = '';
+  document.querySelector('.photo-zone').classList.remove('has-photo');
+  document.getElementById('photoPreview').src = '';
+  updateProgress();
+  window.scrollTo(0, 0);
+}
+</script>
+</body>
+</html>
