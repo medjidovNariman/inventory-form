@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Инвентаризация</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -122,6 +123,10 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
           <div class="opt-icon">⬛</div>
           <span>QR-код</span>
         </div>
+        <div class="scan-option" onclick="scanOCR()">
+          <div class="opt-icon">🔤</div>
+          <span>Фото→Текст</span>
+        </div>
         <div class="scan-option" onclick="document.getElementById('serialInput').focus()">
           <div class="opt-icon">⌨️</div>
           <span>Вручную</span>
@@ -169,7 +174,8 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min
       </div>
       <img class="photo-preview" id="photoPreview" src="" alt="Фото">
     </div>
-    <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhoto(this)">
+    <input type="file" id="ocrInput" accept="image/*" capture="environment" onchange="processOCR(this)" style="display:none">
+  <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhoto(this)">
   </div>
 </div>
 
@@ -211,20 +217,58 @@ function selectStatus(el) {
 // СКАНЕР через Telegram API
 function scanBarcode() {
   if (tg && tg.showScanQrPopup) {
-    tg.showScanQrPopup({ text: 'Наведите на штрихкод или QR-код' }, (result) => {
+    // Telegram сканер — читает QR и некоторые штрихкоды
+    tg.showScanQrPopup({ text: "Наведите на QR-код или штрихкод" }, (result) => {
       if (result) {
-        document.getElementById('serialInput').value = result;
+        // Убираем префикс S/N: если есть
+        let code = result.trim();
+        code = code.replace(/^[Ss]\/[Nn][:\s]*/,"").replace(/^[Ss][Nn][:\s]*/,"").trim();
+        document.getElementById("serialInput").value = code;
         updateProgress();
         tg.closeScanQrPopup();
         return true;
       }
     });
   } else {
-    alert('Сканер доступен только в Telegram. Введите номер вручную.');
+    // Вне Telegram — предлагаем ввести вручную
+    const input = document.getElementById("serialInput");
+    input.focus();
+    alert("Сканер работает только в Telegram. Введите номер вручную или скопируйте из приложения сканера.");
   }
 }
 
 function scanQR() {
+
+function scanOCR() {
+  document.getElementById("ocrInput").click();
+}
+
+async function processOCR(input) {
+  if (!input.files || !input.files[0]) return;
+  const serialInput = document.getElementById("serialInput");
+  serialInput.placeholder = "⏳ Распознаём...";
+  try {
+    const result = await Tesseract.recognize(input.files[0], "eng");
+    const text = result.data.text;
+    let serial = "";
+    const snMatch = text.match(/(?:S/N|SN|Serial)[:\s#]*([A-Z0-9\-]{4,20})/i);
+    if (snMatch) { serial = snMatch[1]; }
+    else {
+      const codes = text.match(/[A-Z0-9]{6,20}/g);
+      if (codes) serial = codes[0];
+    }
+    if (serial) {
+      serialInput.value = serial;
+      updateProgress();
+    } else {
+      alert("Не удалось распознать. Показываю весь текст:\n" + text.substring(0,300));
+    }
+  } catch(e) {
+    alert("Ошибка: " + e.message);
+  }
+  serialInput.placeholder = "Введите или отсканируйте";
+  input.value = "";
+}
   scanBarcode();
 }
 
